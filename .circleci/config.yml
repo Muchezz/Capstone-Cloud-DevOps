@@ -180,7 +180,7 @@ workflows:
           cluster-name: covidanalysis-app-deployment
           aws-region: $AWS_DEFAULT_REGION
           requires:
-            - build-and-push-image
+            - aws-ecr/build-and-push-image
       - deploy-application:
           cluster-name: covidanalysis-app-deployment
           aws-region: $AWS_DEFAULT_REGION
