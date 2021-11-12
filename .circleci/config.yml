@@ -168,7 +168,7 @@ workflows:
           no-output-timeout: 20m
           path: ~
           profile-name: covid19analysis
-          region: << parameters.aws-region >>
+          region: AWS_DEFAULT_REGION
           repo: covidanalysisapp
           skip-when-tags-exist: false
           tag: ${CIRCLE_SHA1}
