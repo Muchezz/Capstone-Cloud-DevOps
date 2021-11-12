@@ -160,9 +160,9 @@ workflows:
       - linting
       - aws-ecr/build_and_push_image:
           name: build-and-push-image
-          account-url: ${AWS_ECR_URL}
-          aws-access-key-id: ${AWS_ACCESS_KEY_ID}
-          region: ${AWS_DEFAULT_REGION}
+          account-url: $AWS_ECR_URL
+          aws-access-key-id: $AWS_ACCESS_KEY_ID
+          region: $AWS_DEFAULT_REGION
           repo: covidanalysis_app
           dockerfile: Dockerfile
           path: app
