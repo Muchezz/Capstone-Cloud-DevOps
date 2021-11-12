@@ -148,7 +148,7 @@ jobs:
           aws-region: << parameters.aws-region >>
       - kubernetes/delete-resource:
           resource-types: "deployment,service"
-          label-selector: "app=demo"
+          label-selector: "app=covidanalysis_app"
           wait: true
       - run:
           name: Check on pod status
@@ -161,6 +161,7 @@ workflows:
       - aws-ecr/build_and_push_image:
           name: build-and-push-image
           account-url: AWS_ECR_URL
+          aws-access-key-id: AWS_ACCESS_KEY_ID
           region: AWS_DEFAULT_REGION
           repo: covidanalysis_app
           dockerfile: Dockerfile
