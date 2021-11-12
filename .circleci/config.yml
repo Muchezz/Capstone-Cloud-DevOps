@@ -167,6 +167,8 @@ workflows:
           dockerfile: Dockerfile
           path: app
           tag: ${CIRCLE_SHA1}
+          requires:
+            - linting
           # Uncomment if the repository does not yet exist
           # create-repo: true
       - aws-eks/create-cluster:
