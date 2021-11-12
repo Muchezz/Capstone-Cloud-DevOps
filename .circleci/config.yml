@@ -1,9 +1,8 @@
 version: 2.1
 
 orbs:
-  
-  aws-eks: circleci/aws-eks@0.2.3
   aws-ecr: circleci/aws-ecr@7.2.0
+  aws-eks: circleci/aws-eks@0.2.3
   kubernetes: circleci/kubernetes@0.4.0
 
 parameters:
@@ -159,17 +158,24 @@ workflows:
   deployment:
     jobs:
       - linting
-      - aws-ecr/build_and_push_image:
+      - aws-ecr/build-and-push-image:
           account-url: AWS_ECR_URL
-          region: AWS_DEFAULT_REGION
-          repo: covidanalysisapp
-          dockerfile: Dockerfile
-          path: ~
-          tag: ${CIRCLE_SHA1}
-          # Uncomment if the repository does not yet exist
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          # context: myContext
           create-repo: true
+          dockerfile: Dockerfile
+          no-output-timeout: 20m
+          path: ~
+          profile-name: covid19analysis
+          region: AWS_REGION
+          repo: covidanalysisapp
+          skip-when-tags-exist: false
+          tag: ${CIRCLE_SHA1}
           requires:
             - linting
+
+
       - aws-eks/create-cluster:
           cluster-name: covidanalysis-app-deployment
           aws-region: $AWS_DEFAULT_REGION
