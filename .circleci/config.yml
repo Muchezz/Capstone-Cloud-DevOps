@@ -20,7 +20,7 @@ workflows:
 jobs:
   build_test:
     docker:
-      - image: circleci/python:2.7.14
+      - image: python:3.10.0-bullseye
     steps:
       - checkout
       - restore_cache:
