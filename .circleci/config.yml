@@ -3,7 +3,7 @@ version: 2.1
 orbs:
   
   aws-eks: circleci/aws-eks@0.2.3
-  aws-ecr: circleci/aws-ecr@0.0.4
+  aws-ecr: circleci/aws-ecr@7.2.0
   kubernetes: circleci/kubernetes@0.4.0
 
 parameters:
@@ -161,14 +161,14 @@ workflows:
       - linting
       - aws-ecr/build_and_push_image:
           name: build-and-push-image
-          account-url: ${AWS_ECR_URL}
-          region: us-east-1
-          repo: covidanalysis_app
-          # dockerfile: Dockerfile
-          # path: app
+          account-url: AWS_ECR_URL
+          region: AWS_DEFAULT_REGION
+          repo: covidanalysisapp
+          dockerfile: Dockerfile
+          path: ~
           tag: ${CIRCLE_SHA1}
           # Uncomment if the repository does not yet exist
-          # create-repo: true
+          create-repo: true
           requires:
             - linting
       - aws-eks/create-cluster:
