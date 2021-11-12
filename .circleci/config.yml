@@ -1,9 +1,10 @@
 version: 2.1
 
 orbs:
-  kubernetes: circleci/kubernetes@0.12.0
+  
   aws-eks: circleci/aws-eks@0.2.3
   aws-ecr: circleci/aws-ecr@0.0.4
+  kubernetes: circleci/kubernetes@0.4.0
 
 parameters:
   docker_image:
