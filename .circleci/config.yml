@@ -163,11 +163,11 @@ workflows:
           account-url: ${AWS_ECR_URL}
           region: us-east-1
           repo: covidanalysis_app
-          dockerfile: Dockerfile
-          path: app
+          # dockerfile: Dockerfile
+          # path: app
           tag: ${CIRCLE_SHA1}
           # Uncomment if the repository does not yet exist
-          create-repo: true
+          # create-repo: true
           requires:
             - linting
       - aws-eks/create-cluster:
