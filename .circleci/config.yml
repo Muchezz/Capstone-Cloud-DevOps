@@ -2,8 +2,8 @@ version: 2.1
 
 orbs:
   aws-ecr: circleci/aws-ecr@7.2.0
-  aws-eks: circleci/aws-eks@0.2.3
-  kubernetes: circleci/kubernetes@0.4.0
+  aws-eks: circleci/aws-eks@0.2.0
+  kubernetes: circleci/kubernetes@0.3.0
 
 parameters:
   docker_image:
@@ -148,7 +148,7 @@ jobs:
           aws-region: << parameters.aws-region >>
       - kubernetes/delete-resource:
           resource-types: "deployment,service"
-          label-selector: "app=covidanalysis_app"
+          label-selector: "app=covidanalysis-app"
           wait: true
       - run:
           name: Check on pod status
