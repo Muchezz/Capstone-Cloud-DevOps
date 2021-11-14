@@ -10,6 +10,16 @@ parameters:
     type: string
     default: python:3.10.0-bullseye
 
+  repo_name:
+    type: string
+    default: covidanalysisapp
+
+  cluster-name:
+        description: |
+          Name of the EKS cluster
+        type: string
+        default: covidanalysisapp
+
 jobs:
   linting:
     docker:
@@ -43,92 +53,56 @@ jobs:
             . venv/bin/activate
             make lint     
 
-  deploy-application:
-    executor: aws-eks/python3
-    parameters:
-      cluster-name:
-        description: |
-          Name of the EKS cluster
-        type: string
-        default: covid19-analysis
-      docker-image-name:
-        description: |
-          Name of the docker image to be deployed
-        default: python:3.10.0-bullseye
-        type: string
-      version-info:
-        description: |
-          App version information
-        type: string
-        default: v1.000
-      aws-region:
-        description: |
-          AWS region
-        default: $AWS_DEFAULT_REGION
-        type: string
-        
+  build_image_and_deploy_staging:
+    docker:
+      - image: << pipeline.parameters.docker_image >>
+
+    # working_directory: ~/app
+
     steps:
       - checkout
+
       - run:
-          name: Create deployment manifest
+          name: Install awscli and gettext-base
           command: |
-            # Replace the placeholders in the manifest with the intended values.
-            # This is to avoid hardcoding the image name in the manifest, to make this
-            # demo project more portable.
-            BUILD_DATE=$(date '+%Y%m%d%H%M%S')
-            cat deployment/app-deploy-template.yaml |\
-               sed "s|DOCKER_IMAGE_NAME|<< parameters.docker-image-name >>|\
-                g;s|BUILD_DATE_VALUE|$BUILD_DATE|g;s|VERSION_INFO_VALUE|\
-                << parameters.version-info >>|g" > deployment/app-deploy.yaml
-      - aws-eks/update-kubeconfig-with-authenticator:
-          cluster-name: << parameters.cluster-name >>
-          install-kubectl: true
-          aws-region: << parameters.aws-region >>
-      - kubernetes/create-or-update-resource:
-          resource-file-path: "deployment/app-deploy.yaml"
-          get-rollout-status: true
-          resource-name: deployment/demoapp
-      - kubernetes/create-or-update-resource:
-          resource-file-path: "deployment/app-service.yaml"
-  test-application:
-    executor: aws-eks/python3
-    parameters:
-      cluster-name:
-        description: |
-          Name of the EKS cluster
-        type: string
-      aws-region:
-        description: |
-          AWS region
-        type: string
-        default: ""
-      expected-version-info:
-        description: |
-          Expected app version (this is used for testing that the
-          correct version has been deployed)
-        type: string
-    steps:
-      - aws-eks/update-kubeconfig-with-authenticator:
-          cluster-name: << parameters.cluster-name >>
-          install-kubectl: true
-          aws-region: << parameters.aws-region >>
+            sudo pip3 install awscli
       - run:
-          name: Wait for service to be ready
+          name: Install aws-iam-authenticator
           command: |
-            kubectl get pods
-            kubectl get services
-            sleep 30
-            for attempt in {1..20}; do
-              EXTERNAL_IP=$(kubectl get service demoapp | awk '{print $4}' | tail -n1)
-              echo "Checking external IP: ${EXTERNAL_IP}"
-              if [ -n "${EXTERNAL_IP}" ] && [ -z $(echo "${EXTERNAL_IP}" | grep "pending") ]; then
-                break
-              fi
-              echo "Waiting for external IP to be ready: ${EXTERNAL_IP}"
-              sleep 10
+            curl -o aws-iam-authenticator curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.13.7/2019-06-11/bin/linux/amd64/aws-iam-authenticator
+            chmod +x ./aws-iam-authenticator
+            sudo mv ./aws-iam-authenticator /usr/local/bin/aws-iam-authenticator
+      - run:
+          name: Install kubectl
+          command: |
+            curl -o kubectl https://amazon-eks.s3-us-west-2.amazonaws.com/1.13.7/2019-06-11/bin/linux/amd64/kubectl
+            chmod +x ./kubectl
+            sudo mv ./kubectl /usr/local/bin/kubectl
+
+      # - setup_remote_docker
+
+      # - run:
+      #     name: Login to repository and build docker image
+      #     command: |
+      #       eval $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+      #       docker build -t ${AWS_REPOSITORY_URL}/${REPOSITORY_NAME}:${CIRCLE_BRANCH}-${CIRCLE_BUILD_NUM} .
+      #       docker push ${AWS_REPOSITORY_URL}/${REPOSITORY_NAME}:${CIRCLE_BRANCH}-${CIRCLE_BUILD_NUM}
+      - run:
+          name: Prepare K8S templates
+          command: |
+            aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name << parameters.cluster-name >>
+            rm -rf .k8s/.generated && mkdir -p .k8s/.generated
+            for f in .k8s/templates/staging.yml
+              do
+              envsubst < $f > ".k8s/.generated/$(basename $f)"
             done
-            sleep 180
-            curl -s --retry 10 "http://$EXTERNAL_IP" | grep "<< parameters.expected-version-info >>"
+      - run:
+          name: Deploy
+          command: |
+            kubectl apply -f .k8s/.generated/ --validate=true
+            kubectl get pod
+
+  
   undeploy-application:
     executor: aws-eks/python3
     parameters:
@@ -169,53 +143,20 @@ workflows:
           path: ~
           profile-name: covid19analysis
           region: AWS_DEFAULT_REGION
-          repo: covidanalysisapp
+          repo: << parameters.repo_name >>
           skip-when-tags-exist: false
           tag: ${CIRCLE_SHA1}
           requires:
             - linting
 
-
-      - aws-eks/create-cluster:
-          cluster-name: covidanalysis-app-deployment
-          aws-region: $AWS_DEFAULT_REGION
-          requires:
-            - aws-ecr/build-and-push-image
-      - deploy-application:
-          cluster-name: covidanalysis-app-deployment
-          aws-region: $AWS_DEFAULT_REGION
-          docker-image-name: "${AWS_ECR_URL}/covidanalysis_app:${CIRCLE_SHA1}"
-          version-info: "${CIRCLE_SHA1}"
-          requires:
-            - aws-eks/create-cluster
+      
+      - build_image_and_deploy_staging
       - test-application:
           name: test-application
           cluster-name: covidanalysis-app-deployment
           aws-region: $AWS_DEFAULT_REGION
           expected-version-info: "${CIRCLE_SHA1}"
           requires:
-            - deploy-application
-      # - undeploy-application:
-      #     cluster-name: eks-orb-demo-app-deployment
-      #     aws-region: $AWS_DEFAULT_REGION
-      #     requires:
-      #       - test-application
-      # - aws-eks/delete-cluster:
-      #     cluster-name: eks-orb-demo-app-deployment
-      #     aws-region: $AWS_DEFAULT_REGION
-      #     wait: true
-      #     requires:
-      #       - undeploy-application
-
-# workflows:
-#   deployment:
-#     jobs:
-#         - linting
-#         - build-docker-image:
-#             requires:
-#               - build
-#         - Push-docker-image:
-             
-#         - lint
-#         - Deploy Container
+            - build_image_and_deploy_staging
+    
 
