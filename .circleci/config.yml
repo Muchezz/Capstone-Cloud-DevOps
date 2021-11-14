@@ -16,7 +16,7 @@ parameters:
         description: |
           Name of the EKS cluster
         type: string
-        default: "covidanalysisapp"
+        default: covidanalysisapp
 
 jobs:
   linting:
@@ -51,7 +51,7 @@ jobs:
             . venv/bin/activate
             make lint     
 
-  build_image_and_deploy_staging:
+  deploy-staging:
     docker:
       - image: << pipeline.parameters.docker_image >>
     
@@ -149,7 +149,10 @@ workflows:
             - linting
 
       
-      - build_image_and_deploy_staging
+      - deploy-staging:
+          requires:
+             - aws-ecr/build-and-push-image
+
       # - test-application:
       #     name: test-application
       #     cluster-name: covidanalysis-app-deployment
