@@ -142,7 +142,7 @@ workflows:
           path: ~
           profile-name: covid19analysis
           region: AWS_DEFAULT_REGION
-          repo: REPO_NAME
+          repo: covidanalysisapp
           skip-when-tags-exist: false
           tag: ${CIRCLE_SHA1}
           requires:
