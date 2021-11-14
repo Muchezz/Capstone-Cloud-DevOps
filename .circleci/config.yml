@@ -54,15 +54,6 @@ jobs:
   deploy-staging:
     docker:
       - image: << pipeline.parameters.docker_image >>
-    
-
-    parameters:
-    cluster-name:
-      description: |
-        Name of the EKS cluster
-      type: string
-      default: 'covidanalysisapp'
-
     steps:
       - checkout
 
@@ -94,7 +85,7 @@ jobs:
       - run:
           name: Prepare K8S templates
           command: |
-            aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name << parameters.cluster-name >>
+            aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name covidanalysisapp
             rm -rf .k8s/.generated && mkdir -p .k8s/.generated
             for f in .k8s/templates/staging.yml
               do
