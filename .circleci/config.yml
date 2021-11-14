@@ -85,7 +85,7 @@ jobs:
       - run:
           name: Prepare K8S templates
           command: |
-            aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name covidanalysisapp
+            aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name $CLUSTER_NAME
             rm -rf .k8s/.generated && mkdir -p .k8s/.generated
             for f in .k8s/templates/staging.yml
               do
