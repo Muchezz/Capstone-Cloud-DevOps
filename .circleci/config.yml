@@ -1,98 +1,69 @@
-# parameters:
-#   docker_image:
-#     type: string
-#     default: python:3.10.0-bullseye 
-
-# jobs:
-#   linting:
-#     docker:
-#     # Use the same Docker base as the project
-#       - image: << pipeline.parameters.docker_image >>
-#     # working_directory: ~/repo
-#     steps:
-#       - checkout
-#       - restore_cache:
-#           keys:
-#             - v1-dependencies-{{ checksum "requirements.txt" }}
-#             # fallback to using the latest cache if no exact match is found
-#             - v1-dependencies-
-#       - run:
-#           name: install dependencies
-#           command: |
-#             python3 -m venv venv
-#             . venv/bin/activate
-#             make install
-#             # Install hadolint
-#             wget -O /bin/hadolint https://github.com/hadolint/hadolint/releases/download/v1.16.3/hadolint-Linux-x86_64 &&\
-#                 chmod +x /bin/hadolint
-#       - save_cache:
-#           paths:
-#             - ./venv
-#           key: v1-dependencies-{{ checksum "requirements.txt" }}
-          
-#       - run:
-#           name: run lint
-#           command: |
-#             . venv/bin/activate
-#             make lint     
-
-#   test-cluster:
-#     executor: aws-eks/python3
-#     parameters:
-#       cluster-name:
-#         description: |
-#           Name of the EKS cluster
-#         type: string
-#     steps:
-#       - kubernetes/install
-#       - aws-eks/update-kubeconfig-with-authenticator:
-#           cluster-name: << parameters.cluster-name >>
-#       - run:
-#           command: |
-#             kubectl get services
-#           name: Test cluster
-
-
-# orbs:
-#   aws-eks: circleci/aws-eks@0.2.3
-#   kubernetes: circleci/kubernetes@0.4.0
-#   aws-ecr: circleci/aws-ecr@7.2.0
-
-# version: 2.1
-
-# workflows:
-#   deployment:
-#     jobs:
-#       - linting
-#       - aws-ecr/build-and-push-image:
-#           account-url: AWS_ECR_URL
-#           aws-access-key-id: AWS_ACCESS_KEY_ID
-#           aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-#           # context: myContext
-#           create-repo: true
-#           dockerfile: Dockerfile
-#           no-output-timeout: 20m
-#           path: ~
-#           profile-name: covid19analysis
-#           region: AWS_DEFAULT_REGION
-#           repo: covidanalysisapp
-#           skip-when-tags-exist: false
-#           tag: ${CIRCLE_SHA1}
-#           requires:
-#             - linting
-
-#       - aws-eks/create-cluster:
-#           cluster-name: covidanalysisapp
-#           requires:
-#             - aws-ecr/build-and-push-image
-#       - test-cluster:
-#           cluster-name: covidanalysisapp
-#           requires:
-#             - aws-eks/create-cluster
-
-
+parameters:
+  docker_image:
+    type: string
+    default: python:3.10.0-bullseye 
 
 jobs:
+  linting:
+    docker:
+    # Use the same Docker base as the project
+      - image: << pipeline.parameters.docker_image >>
+    # working_directory: ~/repo
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "requirements.txt" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+      - run:
+          name: install dependencies
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+            make install
+            # Install hadolint
+            wget -O /bin/hadolint https://github.com/hadolint/hadolint/releases/download/v1.16.3/hadolint-Linux-x86_64 &&\
+                chmod +x /bin/hadolint
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "requirements.txt" }}
+          
+      - run:
+          name: run lint
+          command: |
+            . venv/bin/activate
+            make lint     
+
+  create-cluster:
+    executor: aws-eks/python3
+    parameters:
+      cluster-name:
+        description: |
+          Name of the EKS cluster
+        type: string
+    steps:
+      - run:
+          name: Install the eksctl tool
+          command: |
+            if which eksctl > /dev/null; then
+              echo "eksctl is already installed"
+              exit 0
+            fi
+            mkdir -p eksctl_download
+            curl --silent --location --retry 5 "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" \
+              | tar xz -C eksctl_download
+            chmod +x eksctl_download/eksctl
+            SUDO=""
+            if [ $(id -u) -ne 0 ] && which sudo > /dev/null ; then
+              SUDO="sudo"
+            fi
+            $SUDO mv eksctl_download/eksctl /usr/local/bin/
+            rmdir eksctl_download
+      - aws-eks/create-cluster:
+          cluster-name: covidanalysisapp
+
   test-cluster:
     executor: aws-eks/python3
     parameters:
@@ -106,22 +77,44 @@ jobs:
           cluster-name: << parameters.cluster-name >>
       - run:
           command: |
-            kubectl get services && sleep 300
+            kubectl get services
           name: Test cluster
+
+
 orbs:
-  aws-eks: circleci/aws-eks@1.1.0
+  aws-eks: circleci/aws-eks@0.2.3
   kubernetes: circleci/kubernetes@0.4.0
+  aws-ecr: circleci/aws-ecr@7.2.0
+
 version: 2.1
+
 workflows:
   deployment:
     jobs:
-      - aws-eks/create-cluster:
-          cluster-name: my-eks-demo
+      - linting
+      - aws-ecr/build-and-push-image:
+          account-url: AWS_ECR_URL
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          # context: myContext
+          create-repo: true
+          dockerfile: Dockerfile
+          no-output-timeout: 20m
+          path: ~
+          profile-name: covid19analysis
+          region: AWS_DEFAULT_REGION
+          repo: covidanalysisapp
+          skip-when-tags-exist: false
+          tag: ${CIRCLE_SHA1}
+          requires:
+            - linting
+
+      - create-cluster:
+          requires:
+            - aws-ecr/build-and-push-image
       - test-cluster:
-          cluster-name: my-eks-demo
+          cluster-name: covidanalysisapp
           requires:
-            - aws-eks/create-cluster
-      - aws-eks/delete-cluster:
-          cluster-name: my-eks-demo
-          requires:
-            - test-cluster
+            - create-cluster
+
+
