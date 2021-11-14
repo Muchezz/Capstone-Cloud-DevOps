@@ -1,4 +1,8 @@
-
+parameters:
+  docker_image:
+    type: string
+    default: python:3.10.0-bullseye 
+    
 jobs:
   linting:
     docker:
@@ -31,7 +35,7 @@ jobs:
           command: |
             . venv/bin/activate
             make lint     
-            
+
   test-cluster:
     executor: aws-eks/python3
     parameters:
