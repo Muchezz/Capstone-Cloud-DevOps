@@ -10,9 +10,7 @@ parameters:
     type: string
     default: python:3.10.0-bullseye
 
-  repo_name:
-    type: string
-    default: "covidanalysisapp"
+  
 
   cluster-name:
         description: |
@@ -143,7 +141,7 @@ workflows:
           path: ~
           profile-name: covid19analysis
           region: AWS_DEFAULT_REGION
-          repo: << parameters.repo_name >>
+          repo: REPO_NAME
           skip-when-tags-exist: false
           tag: ${CIRCLE_SHA1}
           requires:
