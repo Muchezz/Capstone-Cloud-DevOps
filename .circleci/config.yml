@@ -98,6 +98,14 @@ jobs:
           AWS region
         type: string
         default: ""
+      docker-image-name:
+        description: |
+          Name of the docker image to be deployed
+        type: string
+      version-info:
+        description: |
+          App version information
+        type: string
     steps:
       - checkout
       - aws-eks/update-kubeconfig-with-authenticator:
