@@ -64,7 +64,7 @@ jobs:
       - run:
           name: Install awscli and gettext-base
           command: |
-            sudo pip3 install awscli
+            pip install awscli
       - run:
           name: Install aws-iam-authenticator
           command: |
