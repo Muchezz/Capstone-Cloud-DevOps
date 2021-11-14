@@ -12,8 +12,8 @@ spec:
       app: covid19-analysis
   strategy:
     rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
     type: RollingUpdate
   template:
     metadata:
@@ -22,16 +22,23 @@ spec:
     spec:
       containers:
         - image: greentropikal/covid19-analysis
-          resources:
-            requests:
-              cpu: 100m
-              memory: 100Mi
           imagePullPolicy: Always
           name: covid19-analysis
-          env:
-        - name: VERSION_INFO
-          value: "VERSION_INFO_VALUE"
-        - name: BUILD_DATE
-          value: "BUILD_DATE_VALUE"
           ports:
             - containerPort: 80
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: covid19-analysis
+  labels:
+    app: covid19-analysis
+spec:
+  type: LoadBalancer
+  selector:
+    app: covid19-analysis
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP

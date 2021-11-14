@@ -6,15 +6,14 @@ parameters:
 jobs:
   linting:
     docker:
-    # Use the same Docker base as the project
       - image: << pipeline.parameters.docker_image >>
-    # working_directory: ~/repo
+    
     steps:
       - checkout
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "requirements.txt" }}
-            # fallback to using the latest cache if no exact match is found
+            
             - v1-dependencies-
       - run:
           name: install dependencies
@@ -36,6 +35,8 @@ jobs:
             . venv/bin/activate
             make lint     
 
+        
+  #Creation of Cluster        
   create-cluster:
     executor: aws-eks/python3
     parameters:
@@ -62,8 +63,11 @@ jobs:
             fi
             $SUDO mv eksctl_download/eksctl /usr/local/bin/
             rmdir eksctl_download
+      - aws-eks/install-aws-iam-authenticator:
+          release-tag: ''
       - aws-eks/create-cluster:
           cluster-name: covidanalysisapp
+          node-type: t3.medium
           
   test-cluster:
     executor: aws-eks/python3
@@ -80,6 +84,66 @@ jobs:
           command: |
             kubectl get services
           name: Test cluster
+
+  # Deploy the Application
+  deploy-application:
+    executor: aws-eks/python3
+    parameters:
+      cluster-name:
+        description: |
+          Name of the EKS cluster
+        type: string
+    steps:
+      - checkout
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: << parameters.cluster-name >>
+          install-kubectl: true
+          aws-region: << parameters.aws-region >>
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: deployment/deployment.yml
+          resource-name: deployment/blue
+      # - kubernetes/create-or-update-resource:
+
+  test-application:
+    executor: aws-eks/python3
+    parameters:
+      cluster-name:
+        description: |
+          Name of the EKS cluster
+        type: string
+      aws-region:
+        description: |
+          AWS region
+        type: string
+        default: ""
+      expected-version-info:
+        description: |
+          Expected app version (this is used for testing that the
+          correct version has been deployed)
+        type: string
+    steps:
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: << parameters.cluster-name >>
+          install-kubectl: true
+          aws-region: << parameters.aws-region >>
+      - run:
+          name: Wait for service to be ready
+          command: |
+            kubectl get pods
+            kubectl get services
+            sleep 30
+            for attempt in {1..20}; do
+              EXTERNAL_IP=$(kubectl get service covid19-analysis | awk '{print $4}' | tail -n1)
+              echo "Checking external IP: ${EXTERNAL_IP}"
+              if [ -n "${EXTERNAL_IP}" ] && [ -z $(echo "${EXTERNAL_IP}" | grep "pending") ]; then
+                break
+              fi
+              echo "Waiting for external IP to be ready: ${EXTERNAL_IP}"
+              sleep 10
+            done
+            sleep 180
+            curl -s --retry 10 "http://$EXTERNAL_IP" | grep "<< parameters.expected-version-info >>"
 
 
 orbs:
@@ -118,4 +182,18 @@ workflows:
           requires:
             - create-cluster
 
+      - deploy-application:
+          cluster-name: covidanalysisapp
+          aws-region: $AWS_DEFAULT_REGION
+          docker-image-name: "${AWS_ECR_URL}/covidanalysisapp:${CIRCLE_SHA1}"
+          version-info: "${CIRCLE_SHA1}"
+          requires:
+            - test-cluster
+      - test-application:
+          name: test-application
+          cluster-name: covidanalysisapp
+          aws-region: $AWS_DEFAULT_REGION
+          expected-version-info: "${CIRCLE_SHA1}"
+          requires:
+            - deploy-application
 
