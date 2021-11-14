@@ -12,13 +12,13 @@ parameters:
 
   repo_name:
     type: string
-    default: covidanalysisapp
+    default: "covidanalysisapp"
 
   cluster-name:
         description: |
           Name of the EKS cluster
         type: string
-        default: covidanalysisapp
+        default: "covidanalysisapp"
 
 jobs:
   linting:
