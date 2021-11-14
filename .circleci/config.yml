@@ -64,8 +64,7 @@ jobs:
             rmdir eksctl_download
       - aws-eks/create-cluster:
           cluster-name: covidanalysisapp
-          wait: true
-
+          
   test-cluster:
     executor: aws-eks/python3
     parameters:
