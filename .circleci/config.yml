@@ -150,12 +150,12 @@ workflows:
 
       
       - build_image_and_deploy_staging
-      - test-application:
-          name: test-application
-          cluster-name: covidanalysis-app-deployment
-          aws-region: $AWS_DEFAULT_REGION
-          expected-version-info: "${CIRCLE_SHA1}"
-          requires:
-            - build_image_and_deploy_staging
+      # - test-application:
+      #     name: test-application
+      #     cluster-name: covidanalysis-app-deployment
+      #     aws-region: $AWS_DEFAULT_REGION
+      #     expected-version-info: "${CIRCLE_SHA1}"
+      #     requires:
+      #       - build_image_and_deploy_staging
     
 
