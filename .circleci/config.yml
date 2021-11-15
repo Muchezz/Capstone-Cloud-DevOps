@@ -54,7 +54,7 @@ jobs:
             make lint     
 
         
-  #Creation of Cluster        
+  # Creation of Cluster        
   create-cluster:
     executor: aws-eks/python3
     parameters:
@@ -86,7 +86,8 @@ jobs:
       - aws-eks/create-cluster:
           cluster-name: covid19analysis
           node-type: t3.medium
-          
+
+   # Test the Cluster               
   test-cluster:
     executor: aws-eks/python3
     parameters:
