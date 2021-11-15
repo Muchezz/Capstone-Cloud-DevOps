@@ -21,7 +21,7 @@ spec:
         app: covid19analysis
     spec:
       containers:
-        - image: greentropikal/covid19-analysis:latest
+        - image: ${AWS_ECR_URL}/covidanalysisapp:${CIRCLE_SHA1}
           imagePullPolicy: Always
           name: covid19analysis
           ports:

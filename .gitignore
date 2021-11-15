@@ -1,4 +1,4 @@
 .capstone
-.circleci/config0.yml
+.vscode
 .circleci/configsample.yml
 .circleci/config1.yml

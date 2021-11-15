@@ -178,7 +178,7 @@ jobs:
               sleep 10
             done
             sleep 180
-            curl -s --retry 10 "http://$EXTERNAL_IP" | grep "<< parameters.expected-version-info >>"
+            curl -s --retry 10 "http://$EXTERNAL_IP" | grep "<< parameters.aws-region >>"
 
 
 orbs:
