@@ -86,7 +86,7 @@ jobs:
       - aws-eks/create-cluster:
           cluster-name: covid19analysis
           node-type: t3.medium
-          #zones: us-east-1a,us-east-1b,us-east-1d,us-east-1f, us-east-1c
+          
 
    # Test the Cluster               
   test-cluster:
