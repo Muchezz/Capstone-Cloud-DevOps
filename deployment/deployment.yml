@@ -9,7 +9,7 @@ spec:
   replicas: 3
   selector:
     matchLabels:
-      app: covid19-analysis
+      app: covid19analysis
   strategy:
     rollingUpdate:
       maxSurge: 25%
@@ -18,12 +18,12 @@ spec:
   template:
     metadata:
       labels:
-        app: covid19-analysis
+        app: covid19analysis
     spec:
       containers:
         - image: ${AWS_ECR_URL}/${REPO_NAME}:${CIRCLE_SHA1}
           imagePullPolicy: Always
-          name: covid19-analysis
+          name: covid19analysis
           ports:
             - containerPort: 80
 
@@ -31,13 +31,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: covid19-analysis
+  name: covid19analysis
   labels:
-    app: covid19-analysis
+    app: covid19analysis
 spec:
   type: LoadBalancer
   selector:
-    app: covid19-analysis
+    app: covid19analysis
   ports:
     - port: 80
       targetPort: 80
