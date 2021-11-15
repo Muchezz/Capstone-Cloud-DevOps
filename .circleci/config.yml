@@ -62,7 +62,7 @@ jobs:
         description: |
           Name of the EKS cluster
         type: string
-        default: covid19
+        default: covid19analysis
     steps:
       - run:
           name: Install the eksctl tool
@@ -84,7 +84,7 @@ jobs:
       - aws-eks/install-aws-iam-authenticator:
           release-tag: ''
       - aws-eks/create-cluster:
-          cluster-name: covid19
+          cluster-name: covid19analysis
           node-type: t3.medium
           
 
@@ -213,12 +213,12 @@ workflows:
           requires:
             - aws-ecr/build-and-push-image
       - test-cluster:
-          cluster-name: covid19
+          cluster-name: covid19analysis
           requires:
             - create-cluster
 
       - deploy-application:
-          cluster-name: covid19
+          cluster-name: covid19analysis
           aws-region: $AWS_DEFAULT_REGION
           docker-image-name: "${AWS_ECR_URL}/covidanalysisapp:${CIRCLE_SHA1}"
           version-info: "${CIRCLE_SHA1}"
@@ -226,7 +226,7 @@ workflows:
             - test-cluster
       - test-application:
           name: test-application
-          cluster-name: covid19
+          cluster-name: covid19analysis
           aws-region: $AWS_DEFAULT_REGION
           expected-version-info: "${CIRCLE_SHA1}"
           requires:
