@@ -6,7 +6,7 @@ commands:
           description: |
             Name of the EKS cluster
           type: string
-          default: 
+          
     steps:
       - run:
           name: Destroy environments

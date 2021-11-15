@@ -4,7 +4,7 @@ metadata:
   name: covid19-analysis
   labels:
     app: covid19-analysis
-  namespace: covid19analysisapp
+  namespace: covid19analysis
 spec:
   replicas: 3
   selector:
