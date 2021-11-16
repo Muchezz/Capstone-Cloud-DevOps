@@ -53,7 +53,16 @@ jobs:
             . venv/bin/activate
             make lint     
 
-        
+  build-and-push-image:
+    machine: true
+    steps:
+         - checkout
+         - run: |
+            docker build -t greentropikal/covid19-analysis:v.1.0 .
+            echo $DOCKERHUB_PASSWORD | docker login -u $DOCKER_USER --password-stdin
+            docker push greentropikal/covid19-analysis:v.1.0
+
+
   # Creation of Cluster        
   create-cluster:
     executor: aws-eks/python3
@@ -103,6 +112,11 @@ jobs:
       - run:
           command: |
             kubectl get services
+            kubectl get pods
+            kubectl describe pods
+            kubectl get nodes
+            kubectl get deployment
+            kubectl get services -o wide
           name: Test cluster
 
   # Deploy the Application
@@ -118,14 +132,6 @@ jobs:
           AWS region
         type: string
         default: ""
-      docker-image-name:
-        description: |
-          Name of the docker image to be deployed
-        type: string
-      version-info:
-        description: |
-          App version information
-        type: string
     steps:
       - checkout
       - aws-eks/update-kubeconfig-with-authenticator:
@@ -134,11 +140,33 @@ jobs:
           aws-region: << parameters.aws-region >>
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
-          resource-file-path: deployment/deployment.yml
+          resource-file-path: deployment/deployV1.yml
           resource-name: deployment/covid19-analysis
       - kubernetes/create-or-update-resource:
           resource-file-path: deployment/app-service.yml
 
+  update_deployment:
+    executor: aws-eks/python3
+    parameters:
+      cluster-name:
+        description: |
+          Name of the EKS cluster
+        type: string
+    steps:
+      - checkout
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: << parameters.cluster-name >>
+          install-kubectl: true
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: deployment/deployV2.yml
+          resource-name: deployment/covid19-analysis
+      - kubernetes/create-or-update-resource:
+          resource-file-path: deployment/app-service.yml
+      - run:
+         command: |
+            kubectl rollout status deployment covid19-analysis
+            kubectl get deployment covid19-analysis
 
   test-application:
     executor: aws-eks/python3
@@ -178,7 +206,7 @@ jobs:
               sleep 10
             done
             sleep 180
-            curl -s --retry 10 "http://$EXTERNAL_IP" | grep "<< parameters.aws-region >>"
+            curl -I -s --retry 10 "http://$EXTERNAL_IP" | grep HTTP
 
 
 orbs:
@@ -192,26 +220,29 @@ workflows:
   deployment:
     jobs:
       - linting
-      - aws-ecr/build-and-push-image:
-          account-url: AWS_ECR_URL
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          # context: myContext
-          create-repo: true
-          dockerfile: Dockerfile
-          no-output-timeout: 20m
-          path: ~
-          profile-name: covid19analysis
-          region: AWS_DEFAULT_REGION
-          repo: covidanalysisapp
-          skip-when-tags-exist: false
-          tag: ${CIRCLE_SHA1}
+      # - aws-ecr/build-and-push-image:
+      #     account-url: AWS_ECR_URL
+      #     aws-access-key-id: AWS_ACCESS_KEY_ID
+      #     aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+      #     # context: myContext
+      #     create-repo: true
+      #     dockerfile: Dockerfile
+      #     no-output-timeout: 20m
+      #     path: ~
+      #     profile-name: covid19analysis
+      #     region: AWS_DEFAULT_REGION
+      #     repo: covidanalysisapp
+      #     skip-when-tags-exist: false
+      #     tag: ${CIRCLE_SHA1}
+      #     requires:
+      #       - linting
+      - build-and-push-image:
           requires:
-            - linting
+             - linting
 
       - create-cluster:
           requires:
-            - aws-ecr/build-and-push-image
+            - build-and-push-image
       - test-cluster:
           cluster-name: covid19analysis
           requires:
@@ -220,7 +251,6 @@ workflows:
       - deploy-application:
           cluster-name: covid19analysis
           aws-region: $AWS_DEFAULT_REGION
-          docker-image-name: "${AWS_ECR_URL}/covidanalysisapp:${CIRCLE_SHA1}"
           version-info: "${CIRCLE_SHA1}"
           requires:
             - test-cluster
@@ -228,7 +258,6 @@ workflows:
           name: test-application
           cluster-name: covid19analysis
           aws-region: $AWS_DEFAULT_REGION
-          expected-version-info: "${CIRCLE_SHA1}"
           requires:
             - deploy-application
 
