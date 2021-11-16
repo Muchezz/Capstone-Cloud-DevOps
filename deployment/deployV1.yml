@@ -21,7 +21,7 @@ spec:
         app: covid19analysis
     spec:
       containers:
-        - image: greentropikal/covid19-analysis:v.1.0
+        - image: greentropikal/covid19-analysis:latest
           imagePullPolicy: Always
           name: covid19analysis
           ports:

@@ -58,9 +58,9 @@ jobs:
     steps:
          - checkout
          - run: |
-            docker build -t greentropikal/covid19-analysis:v.1.0 .
+            docker build -t greentropikal/covid19-analysis:latest .
             echo $DOCKERHUB_PASSWORD | docker login -u $DOCKER_USER --password-stdin
-            docker push greentropikal/covid19-analysis:v.1.0
+            docker push greentropikal/covid19-analysis:latest
 
 
   # Creation of Cluster        
@@ -251,7 +251,6 @@ workflows:
       - deploy-application:
           cluster-name: covid19analysis
           aws-region: $AWS_DEFAULT_REGION
-          version-info: "${CIRCLE_SHA1}"
           requires:
             - test-cluster
       - test-application:
