@@ -71,7 +71,7 @@ jobs:
         description: |
           Name of the EKS cluster
         type: string
-        default: covid19analysis
+        default: covid19-analysis
     steps:
       - run:
           name: Install the eksctl tool
@@ -93,7 +93,7 @@ jobs:
       - aws-eks/install-aws-iam-authenticator:
           release-tag: ''
       - aws-eks/create-cluster:
-          cluster-name: covid19analysis
+          cluster-name: covid19-analysis
           node-type: t3.medium
           
 
@@ -229,6 +229,32 @@ jobs:
           command: |
             kubectl get pods
 
+  delete-cluster:
+    executor: aws-eks/python3
+    steps:
+      - run:
+          name: Install the eksctl tool
+          command: |
+            if which eksctl > /dev/null; then
+              echo "eksctl is already installed"
+              exit 0
+            fi
+            mkdir -p eksctl_download
+            curl --silent --location --retry 5 "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" \
+              | tar xz -C eksctl_download
+            chmod +x eksctl_download/eksctl
+            SUDO=""
+            if [ $(id -u) -ne 0 ] && which sudo > /dev/null ; then
+              SUDO="sudo"
+            fi
+            $SUDO mv eksctl_download/eksctl /usr/local/bin/
+            rmdir eksctl_download
+      - aws-eks/delete-cluster:
+          cluster-name: covid19-analysis
+          aws-region: $AWS_DEFAULT_REGION
+          wait: true
+
+
 
 orbs:
   aws-eks: circleci/aws-eks@1.1.0
@@ -249,33 +275,30 @@ workflows:
           requires:
             - build-and-push-image
       - test-cluster:
-          cluster-name: covid19analysis
+          cluster-name: covid19-analysis
           requires:
             - create-cluster
 
       - deploy-application:
-          cluster-name: covid19analysis
+          cluster-name: covid19-analysis
           aws-region: $AWS_DEFAULT_REGION
           requires:
             - test-cluster
 
       - test-application:
           name: test-application
-          cluster-name: covid19analysis
+          cluster-name: covid19-analysis
           aws-region: $AWS_DEFAULT_REGION
           requires:
             - deploy-application
 
       - undeploy-application:
-          cluster-name: covid19analysis
+          cluster-name: covid19-analysis
           aws-region: $AWS_DEFAULT_REGION
           requires:
             - test-application
 
-      - aws-eks/delete-cluster:
-          cluster-name: covid19analysis
-          aws-region: $AWS_DEFAULT_REGION
-          wait: true
+      - delete-cluster:
           requires:
             - undeploy-application
 
