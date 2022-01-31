@@ -1,4 +1,26 @@
-
+commands:
+  rollback-job:
+    description: Destroy EKS Cluster.
+    parameters:
+        cluster-name:
+          description: |
+            Name of the EKS cluster
+          type: string
+          
+    steps:
+      - run:
+          name: Destroy environments
+          when: on_fail
+          command: |
+            echo "Destroying the enviroment"
+      - undeploy-application:
+          cluster-name: covid19-analysis
+          aws-region: $AWS_DEFAULT_REGION
+          requires:
+            - test-application
+      - delete-cluster:
+          requires:
+            - undeploy-application
 parameters:
   docker_image:
     type: string
@@ -78,6 +100,9 @@ jobs:
       - aws-eks/create-cluster:
           cluster-name: covid19-analysis
           node-type: t3.medium
+
+        #rollback 
+      - rollback-job
           
 
    # Test the Cluster               
@@ -128,6 +153,8 @@ jobs:
       - kubernetes/create-or-update-resource:
           resource-file-path: deployment/app-service.yml
 
+      - rollback-job
+
   update_deployment:
     executor: aws-eks/python3
     parameters:
@@ -150,6 +177,8 @@ jobs:
          command: |
             kubectl rollout status deployment covid19-analysis
             kubectl get deployment covid19-analysis
+
+      - rollback-job
 
   test-application:
     executor: aws-eks/python3
