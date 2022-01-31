@@ -122,7 +122,7 @@ jobs:
           aws-region: << parameters.aws-region >>
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
-          resource-file-path: deployment/deployV1.yml
+          resource-file-path: deployment/deploy.yml
           resource-name: deployment/covid19-analysis
       - kubernetes/create-or-update-resource:
           resource-file-path: deployment/app-service.yml
