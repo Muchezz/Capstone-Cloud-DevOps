@@ -14,7 +14,7 @@ commands:
           command: |
             echo "Destroying the enviroment"
       - undeploy-application:
-          cluster-name: covid19-analysis
+          cluster-name: << pipeline.parameters.cluster-name >>
           aws-region: $AWS_DEFAULT_REGION
           requires:
             - test-application
@@ -25,6 +25,12 @@ parameters:
   docker_image:
     type: string
     default: python:3.10.0-bullseye 
+
+  cluster-name:
+        description: |
+          Name of the EKS cluster
+        type: string
+        default: covid19-analysis
 
 jobs:
   linting:
@@ -71,34 +77,11 @@ jobs:
   # Creation of Cluster        
   create-cluster:
     executor: aws-eks/python3
-    parameters:
-      cluster-name:
-        description: |
-          Name of the EKS cluster
-        type: string
-        default: covid19-analysis
     steps:
-      - run:
-          name: Install the eksctl tool
-          command: |
-            if which eksctl > /dev/null; then
-              echo "eksctl is already installed"
-              exit 0
-            fi
-            mkdir -p eksctl_download
-            curl --silent --location --retry 5 "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" \
-              | tar xz -C eksctl_download
-            chmod +x eksctl_download/eksctl
-            SUDO=""
-            if [ $(id -u) -ne 0 ] && which sudo > /dev/null ; then
-              SUDO="sudo"
-            fi
-            $SUDO mv eksctl_download/eksctl /usr/local/bin/
-            rmdir eksctl_download
       - aws-eks/install-aws-iam-authenticator:
           release-tag: ''
       - aws-eks/create-cluster:
-          cluster-name: covid19-analysis
+          cluster-name: << pipeline.parameters.cluster-name >>
           node-type: t3.medium
 
         #rollback 
@@ -108,15 +91,10 @@ jobs:
    # Test the Cluster               
   test-cluster:
     executor: aws-eks/python3
-    parameters:
-      cluster-name:
-        description: |
-          Name of the EKS cluster
-        type: string
     steps:
       - kubernetes/install
       - aws-eks/update-kubeconfig-with-authenticator:
-          cluster-name: << parameters.cluster-name >>
+          cluster-name: << pipeline.parameters.cluster-name >>
       - run:
           command: |
             kubectl get services
@@ -131,10 +109,6 @@ jobs:
   deploy-application:
     executor: aws-eks/python3
     parameters:
-      cluster-name:
-        description: |
-          Name of the EKS cluster
-        type: string
       aws-region:
         description: |
           AWS region
@@ -143,7 +117,7 @@ jobs:
     steps:
       - checkout
       - aws-eks/update-kubeconfig-with-authenticator:
-          cluster-name: << parameters.cluster-name >>
+          cluster-name: << pipeline.parameters.cluster-name >>
           install-kubectl: true
           aws-region: << parameters.aws-region >>
       - kubernetes/create-or-update-resource:
@@ -157,15 +131,10 @@ jobs:
 
   update_deployment:
     executor: aws-eks/python3
-    parameters:
-      cluster-name:
-        description: |
-          Name of the EKS cluster
-        type: string
     steps:
       - checkout
       - aws-eks/update-kubeconfig-with-authenticator:
-          cluster-name: << parameters.cluster-name >>
+          cluster-name: << pipeline.parameters.cluster-name >>
           install-kubectl: true
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
@@ -183,10 +152,6 @@ jobs:
   test-application:
     executor: aws-eks/python3
     parameters:
-      cluster-name:
-        description: |
-          Name of the EKS cluster
-        type: string
       aws-region:
         description: |
           AWS region
@@ -194,7 +159,7 @@ jobs:
         default: ""
     steps:
       - aws-eks/update-kubeconfig-with-authenticator:
-          cluster-name: << parameters.cluster-name >>
+          cluster-name: << pipeline.parameters.cluster-name >>
           install-kubectl: true
           aws-region: << parameters.aws-region >>
       - run:
@@ -218,10 +183,6 @@ jobs:
   undeploy-application:
     executor: aws-eks/python3
     parameters:
-      cluster-name:
-        description: |
-          Name of the EKS cluster
-        type: string
       aws-region:
         description: |
           AWS region
@@ -229,7 +190,7 @@ jobs:
         default: ""
     steps:
       - aws-eks/update-kubeconfig-with-authenticator:
-          cluster-name: << parameters.cluster-name >>
+          cluster-name: << pipeline.parameters.cluster-name >>
           install-kubectl: true
           aws-region: << parameters.aws-region >>
       - kubernetes/delete-resource:
@@ -262,14 +223,14 @@ jobs:
             $SUDO mv eksctl_download/eksctl /usr/local/bin/
             rmdir eksctl_download
       - aws-eks/delete-cluster:
-          cluster-name: covid19-analysis
+          cluster-name: << pipeline.parameters.cluster-name >>
           aws-region: $AWS_DEFAULT_REGION
           wait: true
 
 
 
 orbs:
-  aws-eks: circleci/aws-eks@1.1.0
+  aws-eks: circleci/aws-eks@2.1.1
   kubernetes: circleci/kubernetes@0.4.0
   
 
@@ -290,7 +251,6 @@ workflows:
           requires:
             - build-and-push-image
       - test-cluster:
-          cluster-name: covid19-analysis
           requires:
             - create-cluster
 
@@ -300,7 +260,6 @@ workflows:
              - test-cluster
 
       - deploy-application:
-          cluster-name: covid19-analysis
           aws-region: $AWS_DEFAULT_REGION 
           requires:
             -  hold_deploy
@@ -308,7 +267,6 @@ workflows:
 
       - test-application:
           name: test-application
-          cluster-name: covid19-analysis
           aws-region: $AWS_DEFAULT_REGION
           requires:
             - deploy-application
