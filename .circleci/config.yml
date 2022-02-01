@@ -7,6 +7,9 @@ parameters:
   docker_image:
     type: string
     default: python:3.10.0-bullseye 
+  executor:
+    type: string
+    default: cimg/python:3.10
 
   cluster-name:
         description: |
@@ -63,26 +66,9 @@ jobs:
 
   # Creation of Cluster        
   create-cluster:
-    executor: aws-eks/python3
-    
+    docker:
+      - image: << pipeline.parameters.executor>>
     steps:
-      - run:
-          name: Install the eksctl tool
-          command: |
-            if which eksctl > /dev/null; then
-              echo "eksctl is already installed"
-              exit 0
-            fi
-            mkdir -p eksctl_download
-            curl --silent --location --retry 5 "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" \
-              | tar xz -C eksctl_download
-            chmod +x eksctl_download/eksctl
-            SUDO=""
-            if [ $(id -u) -ne 0 ] && which sudo > /dev/null ; then
-              SUDO="sudo"
-            fi
-            $SUDO mv eksctl_download/eksctl /usr/local/bin/
-            rmdir eksctl_download
       - aws-eks/install-aws-iam-authenticator:
           release-tag: ''
       - aws-eks/create-cluster:
@@ -92,7 +78,8 @@ jobs:
 
    # Test the Cluster               
   test-cluster:
-    executor: aws-eks/python3
+    docker:
+      - image: << pipeline.parameters.executor>>
     steps:
       - kubernetes/install
       - aws-eks/update-kubeconfig-with-authenticator:
@@ -109,7 +96,8 @@ jobs:
 
   # Deploy the Application
   deploy-application:
-    executor: aws-eks/python3
+    docker:
+      - image: << pipeline.parameters.executor>>
     steps:
       - checkout
       - aws-eks/update-kubeconfig-with-authenticator:
@@ -122,28 +110,6 @@ jobs:
           resource-name: deployment/covid19-analysis
       - kubernetes/create-or-update-resource:
           resource-file-path: deployment/app-service.yml
-
-      # - rollback-job
-
-  update_deployment:
-    executor: aws-eks/python3
-    steps:
-      - checkout
-      - aws-eks/update-kubeconfig-with-authenticator:
-          cluster-name: << pipeline.parameters.cluster-name >>
-          install-kubectl: true
-      - kubernetes/create-or-update-resource:
-          get-rollout-status: true
-          resource-file-path: deployment/deployV2.yml
-          resource-name: deployment/covid19-analysis
-      - kubernetes/create-or-update-resource:
-          resource-file-path: deployment/app-service.yml
-      - run:
-         command: |
-            kubectl rollout status deployment covid19-analysis
-            kubectl get deployment covid19-analysis
-
-      - rollback-job
 
   test-application:
     executor: aws-eks/python3
