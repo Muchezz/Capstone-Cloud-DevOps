@@ -13,7 +13,11 @@ parameters:
           Name of the EKS cluster
         type: string
         default: covid19-analysis
-  aws-region: $AWS_DEFAULT_REGION
+  aws-region:
+        description: |
+          AWS region
+        type: string
+        default: $AWS_DEFAULT_REGION
 
 jobs:
   linting:
