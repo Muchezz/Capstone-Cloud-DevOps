@@ -1,6 +1,6 @@
+[![CircleCI](https://circleci.com/gh/Muchezz/Covid19-analysis/tree/main.svg?style=svg)](https://circleci.com/gh/Muchezz/Covid19-analysis/tree/main)
 
-
-# DevOps
+# Walkthrough
 In this project I am applying the skills and knowledge which were developed throughout the Cloud DevOps Nanodegree program. These include:
 
 Working in AWS
