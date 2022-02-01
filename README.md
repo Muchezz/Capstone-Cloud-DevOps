@@ -1,7 +1,7 @@
 [![CircleCI](https://circleci.com/gh/Muchezz/Covid19-analysis/tree/main.svg?style=svg)](https://circleci.com/gh/Muchezz/Covid19-analysis/tree/main)
 
-# Walkthrough
-Deploying a Flask application container to AWS EKS and viweing the webpage on Elastic Load Balancer.
+# Project
+Deploying a Flask application container to AWS EKS and viweing the webpage via the Elastic Load Balancer.
 In this project I am working with:
 
 - AWS
