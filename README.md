@@ -10,7 +10,8 @@ In this project I am working with:
 - Docker
 - Kubernetes clusters
 - Flask 
-
+Accessing the deployed app on elb. 
+![ScreenShot](app/screenshots/elb.png)
 # Steps in Completing the Project 
 
 ## Prerequisites
