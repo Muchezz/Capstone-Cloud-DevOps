@@ -112,12 +112,13 @@ jobs:
           resource-file-path: deployment/app-service.yml
 
   test-application:
-    executor: aws-eks/python3
+    docker:
+      - image: << pipeline.parameters.executor>>
     steps:
       - aws-eks/update-kubeconfig-with-authenticator:
           cluster-name: << pipeline.parameters.cluster-name >>
           install-kubectl: true
-          aws-region: << parameters.aws-region >>
+          aws-region: << pipeline.parameters.aws-region >>
       - run:
           name: Wait for service to be ready
           command: |
